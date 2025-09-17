@@ -21,7 +21,7 @@ A production-grade web application that demonstrates the fundamental trade-offs 
 
 ```bash
 git clone <your-repo-url>
-cd cc_project
+cd LatentSee
 npm install
 ```
 
