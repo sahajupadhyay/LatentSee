@@ -1,58 +1,203 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Zap, 
+  Database, 
+  Brain, 
+  ShoppingCart, 
+  TrendingUp, 
+  Eye, 
+  Sparkles,
+  Clock,
+  Shield,
+  Activity
+} from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { Button, Card, Alert, LoadingSpinner } from '@/components/ui';
-import { Product, ApiResponse, SingleProductResponse } from '@/lib/types';
-
-/**
- * Dashboard Component - Main interface for consistency model testing
- * 
- * Features:
- * - Error boundaries for graceful error handling
- * - Accessible UI components
- * - Loading states and user feedback
- * - Type-safe API interactions
- * - Performance metrics display
- */
+import { Product, ApiResponse } from '@/lib/types';
 
 interface CacheMetrics {
   status?: string;
   policy?: string;
-  priority?: string;
   hitRate?: string;
-  age?: string;
   responseTime?: string;
-  cacheCheckTime?: string;
-  dbTime?: string;
   fromCache?: string;
   efficiency?: string;
-  size?: string;
-  memoryUsage?: string;
 }
 
 interface DashboardState {
   data: Product[] | null;
   error: string | null;
   isLoading: boolean;
-  requestMetadata: {
-    requestId?: string;
-    duration?: number;
-    timestamp?: string;
-  } | null;
+  requestMetadata: any;
   cacheMetrics: CacheMetrics | null;
   selectedProduct: Product | null;
-  cart: CartItem[];
   lastFetchMode: string | null;
 }
 
-interface CartItem {
-  product: Product;
-  addedPrice: number;
-  quantity: number;
-  mode: string;
-  addedAt: string;
-}
+const ConsistencyCard = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  endpoint, 
+  color, 
+  onTest, 
+  isLoading,
+  isActive 
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  endpoint: string;
+  color: string;
+  onTest: (endpoint: string, mode: string) => void;
+  isLoading: boolean;
+  isActive: boolean;
+}) => (
+  <motion.div
+    whileHover={{ scale: 1.02, y: -5 }}
+    whileTap={{ scale: 0.98 }}
+    className={`card-interactive group relative overflow-hidden ${
+      isActive ? 'ring-2 ring-accent-500 shadow-glow' : ''
+    }`}
+    onClick={() => onTest(endpoint, title)}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-primary-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    
+    <div className="relative z-10">
+      <div className={`inline-flex p-3 rounded-2xl ${color} mb-4`}>
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      
+      <h3 className="text-h3 font-heading font-semibold mb-2 text-white group-hover:text-accent-400 transition-colors">
+        {title}
+      </h3>
+      
+      <p className="text-neutral-100/80 text-body-sm leading-relaxed mb-4">
+        {description}
+      </p>
+      
+      <div className="flex items-center justify-between">
+        <span className="text-accent-500 text-body-sm font-medium">
+          Test Performance
+        </span>
+        {isLoading && (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-4 h-4 border-2 border-accent-500 border-t-transparent rounded-full"
+          />
+        )}
+      </div>
+    </div>
+  </motion.div>
+);
+
+const MetricsPanel = ({ metrics, responseTime }: { 
+  metrics: CacheMetrics | null; 
+  responseTime?: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="card"
+  >
+    <div className="flex items-center gap-3 mb-4">
+      <Activity className="w-5 h-5 text-accent-500" />
+      <h3 className="text-h3 font-heading font-semibold">Performance Metrics</h3>
+    </div>
+    
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="text-center">
+        <div className="text-2xl font-bold text-accent-500 mb-1">
+          {responseTime ? `${responseTime}ms` : '--'}
+        </div>
+        <div className="text-body-sm text-neutral-100/60">Response Time</div>
+      </div>
+      
+      <div className="text-center">
+        <div className="text-2xl font-bold text-secondary-500 mb-1">
+          {metrics?.hitRate || '--'}
+        </div>
+        <div className="text-body-sm text-neutral-100/60">Cache Hit Rate</div>
+      </div>
+      
+      <div className="text-center">
+        <div className="text-2xl font-bold text-alert-500 mb-1">
+          {metrics?.fromCache || '--'}
+        </div>
+        <div className="text-body-sm text-neutral-100/60">From Cache</div>
+      </div>
+      
+      <div className="text-center">
+        <div className="text-2xl font-bold text-accent-400 mb-1">
+          {metrics?.efficiency || '--'}
+        </div>
+        <div className="text-body-sm text-neutral-100/60">Efficiency</div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const ProductGrid = ({ products }: { products: Product[] }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: 0.2 }}
+    className="card"
+  >
+    <div className="flex items-center gap-3 mb-6">
+      <ShoppingCart className="w-5 h-5 text-accent-500" />
+      <h3 className="text-h3 font-heading font-semibold">Product Intelligence</h3>
+      <span className="px-3 py-1 bg-accent-500/20 text-accent-400 rounded-full text-xs font-medium">
+        {products.length} items
+      </span>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {products.slice(0, 6).map((product, index) => (
+        <motion.div
+          key={product.id}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          className="bg-primary-600/30 rounded-xl p-4 border border-primary-500/20 hover:border-accent-500/40 transition-all duration-200 group"
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1">
+              <h4 className="font-medium text-white text-sm mb-1 group-hover:text-accent-400 transition-colors">
+                {product.name}
+              </h4>
+              <p className="text-neutral-100/60 text-xs line-clamp-2">
+                {product.description}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-accent-500 font-bold text-sm">
+                ₹{product.price}
+              </div>
+              <div className="text-neutral-100/40 text-xs">
+                Stock: {product.inventory}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+              product.category === 'electronics' 
+                ? 'bg-secondary-500/20 text-secondary-400'
+                : 'bg-accent-500/20 text-accent-400'
+            }`}>
+              {product.category}
+            </span>
+            <TrendingUp className="w-4 h-4 text-neutral-100/40" />
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  </motion.div>
+);
 
 function DashboardContent() {
   const [state, setState] = useState<DashboardState>({
@@ -62,35 +207,29 @@ function DashboardContent() {
     requestMetadata: null,
     cacheMetrics: null,
     selectedProduct: null,
-    cart: [],
     lastFetchMode: null
   });
 
-  /**
-   * Handles API calls with comprehensive error handling and state management
-   */
-  const handleApiCall = useCallback(async (endpoint: string, buttonName: string) => {
+  const [responseTime, setResponseTime] = useState<number>();
+
+  const handleApiCall = useCallback(async (endpoint: string, mode: string) => {
     try {
-      const requestId = crypto.randomUUID();
+      setState(prev => ({ ...prev, isLoading: true, error: null, lastFetchMode: mode }));
       
-      setState(prev => ({
-        ...prev,
-        isLoading: true,
-        error: null
-      }));
+      const startTime = Date.now();
       const response = await fetch(endpoint, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'X-Request-ID': requestId
-        }
+        headers: { 'Accept': 'application/json' }
       });
+      const endTime = Date.now();
+      
+      setResponseTime(endTime - startTime);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const result: SingleProductResponse = await response.json();
+      const result: ApiResponse = await response.json();
       
       if (result.error) {
         throw new Error(result.error);
@@ -187,23 +326,7 @@ function DashboardContent() {
     }));
   }, []);
 
-  // Add product to cart using the last fetched price/mode
-  const addToCart = useCallback(async () => {
-    if (!state.selectedProduct || !state.lastFetchMode || !state.requestMetadata) return;
-    
-    const cartItem: CartItem = {
-      product: state.selectedProduct,
-      addedPrice: state.selectedProduct.price,
-      quantity: 1,
-      mode: state.lastFetchMode,
-      addedAt: new Date().toISOString()
-    };
-    
-    setState(prev => ({
-      ...prev,
-      cart: [...prev.cart, cartItem]
-    }));
-  }, [state.selectedProduct, state.lastFetchMode, state.requestMetadata]);
+
 
   // Load products on component mount
   useEffect(() => {
@@ -309,47 +432,7 @@ function DashboardContent() {
               )}
             </div>
 
-            {/* Neural Shopping Cart */}
-            {state.cart.length > 0 && (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mt-6 hover:bg-white/8 transition-all duration-300">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 font-['Sora'] text-white">
-                  <span className="text-xl">🛒</span>
-                  Neural Cart ({state.cart.length})
-                </h3>
-                <div className="space-y-3 max-h-48 overflow-y-auto">
-                  {state.cart.map((item, index) => (
-                    <div key={index} className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 hover:bg-white/8 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm leading-tight mb-1 text-white">{item.product.name}</div>
-                          <div className="flex items-center gap-2 text-xs opacity-80">
-                            <span className="bg-white/10 backdrop-blur-sm border border-white/20 px-2 py-1 rounded text-xs text-white">
-                              {item.mode} mode
-                            </span>
-                            <span className="opacity-60 text-slate-400">•</span>
-                            <span className="text-slate-300">{new Date(item.addedAt).toLocaleTimeString()}</span>
-                          </div>
-                        </div>
-                        <div className="text-sm ml-3 font-bold text-teal-400">
-                          ₹{(item.addedPrice / 100).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6 pt-4 border-t border-white/10">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="font-semibold text-white">Neural Total:</span>
-                    <span className="text-xl font-bold text-teal-400">
-                      ₹{(state.cart.reduce((sum, item) => sum + item.addedPrice, 0) / 100).toLocaleString()}
-                    </span>
-                  </div>
-                  <button className="relative w-full overflow-hidden border-none rounded-xl font-['Sora'] font-semibold text-base px-6 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer">
-                    🚀 Checkout with AI Verification
-                  </button>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Demo Panel - Right Side */}
@@ -400,16 +483,7 @@ function DashboardContent() {
                     </div>
                   </div>
                   
-                  {state.lastFetchMode && (
-                    <div className="mt-6 pt-6 border-t border-white/10">
-                      <button 
-                        onClick={addToCart}
-                        className="relative overflow-hidden border-none rounded-xl font-['Sora'] font-semibold text-base px-8 py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg hover:shadow-xl hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300 cursor-pointer w-full md:w-auto"
-                      >
-                        🛒 Add to Neural Cart • ₹{(state.selectedProduct.price / 100).toLocaleString()}
-                      </button>
-                    </div>
-                  )}
+
                 </div>
 
                 {/* AI Consistency Models */}

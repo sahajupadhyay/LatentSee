@@ -1,18 +1,26 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Sora } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const sora = Sora({ 
+  subsets: ['latin'],
+  variable: '--font-sora',
+});
 
 export const metadata: Metadata = {
-  title: 'Smart Cloud Dashboard',
-  description: 'Experience latency-consistency trade-offs in distributed systems through interactive consistency models.',
-  keywords: ['distributed systems', 'consistency', 'latency', 'caching', 'cloud computing'],
-  authors: [{ name: 'Smart Cloud Dashboard' }],
+  title: 'LatentSee - AI-Powered E-commerce Insights',
+  description: 'Discover hidden patterns in real-time: See how cloud systems balance speed vs correctness in e-commerce scenarios',
+  keywords: ['AI', 'e-commerce', 'insights', 'neural caching', 'real-time analytics', 'latency analysis'],
+  authors: [{ name: 'LatentSee Team' }],
   robots: 'index, follow',
   openGraph: {
-    title: 'Smart Cloud Dashboard',
-    description: 'Interactive demonstration of consistency models in distributed systems',
+    title: 'LatentSee - AI-Powered E-commerce Insights',
+    description: 'Discover hidden patterns in real-time: See how cloud systems balance speed vs correctness in e-commerce scenarios',
     type: 'website',
     locale: 'en_US',
   }
@@ -21,7 +29,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#1f2937',
+  themeColor: '#1B1F3B', // Deep Space Indigo
 };
 
 export default function RootLayout({
@@ -30,8 +38,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+      <body className="font-body bg-slate-900 text-white antialiased">
         {children}
       </body>
     </html>
