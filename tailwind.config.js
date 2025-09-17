@@ -8,41 +8,77 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // LatentSee AI x E-Commerce Color Palette
+        // LatentSee AI x E-Commerce Color Palette - Exact Specification
         primary: {
-          // Deep Space Indigo - depth, intelligence, latent space feel
-          900: '#0f1120', // darker variant
-          800: '#1B1F3B', // main color
-          700: '#2a2f56', // lighter variant
-          600: '#3a4071', // even lighter
+          // Deep Space Indigo → depth, intelligence, latent space feel
+          DEFAULT: '#1B1F3B',
+          50: '#f0f1f7',
+          100: '#e2e4f0',
+          200: '#c8cde2',
+          300: '#a8b0d0',
+          400: '#8691bc',
+          500: '#6b77a8',
+          600: '#5a6394',
+          700: '#4d5378',
+          800: '#434862',
+          900: '#1B1F3B',
+          950: '#0f1120',
         },
         accent: {
-          // Aurora Teal - insight highlight, energetic
+          // Aurora Teal → insight highlight, energetic
+          DEFAULT: '#00C6AE',
+          50: '#f0fffe',
+          100: '#ccfff9',
+          200: '#99fff4',
+          300: '#5dfde9',
+          400: '#1df1d7',
           500: '#00C6AE',
-          400: '#1dd1bc',
-          300: '#3ddcc9',
-          200: '#66e6d7',
+          600: '#00b39b',
+          700: '#008e7e',
+          800: '#037065',
+          900: '#075d53',
         },
         secondary: {
-          // Solar Purple - creativity, neural net vibes
+          // Solar Purple → creativity, neural net vibes
+          DEFAULT: '#6C63FF',
+          50: '#f4f3ff',
+          100: '#ebe9fe',
+          200: '#d9d6fe',
+          300: '#bfb8fd',
+          400: '#9d91fa',
           500: '#6C63FF',
-          400: '#847eff',
-          300: '#9c99ff',
-          200: '#b5b3ff',
+          600: '#5b4bf5',
+          700: '#4c3ae1',
+          800: '#4031bd',
+          900: '#362b9a',
         },
         neutral: {
-          // Muted Sand - soft neutral background
-          100: '#E0DCC8',
-          200: '#d4ceb5',
-          300: '#c8c0a2',
-          400: '#bcb18f',
+          // Muted Sand → soft neutral background
+          DEFAULT: '#E0DCC8',
+          50: '#fafaf8',
+          100: '#f4f3ef',
+          200: '#E0DCC8',
+          300: '#d4ceb5',
+          400: '#c8c0a2',
+          500: '#bcb18f',
+          600: '#a69b7c',
+          700: '#8a8068',
+          800: '#726956',
+          900: '#5e5649',
         },
         alert: {
-          // Signal Coral - sparing use for anomalies/alerts
+          // Signal Coral → sparing use for anomalies/alerts
+          DEFAULT: '#FF6B6B',
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
           500: '#FF6B6B',
-          400: '#ff8a8a',
-          300: '#ffa8a8',
-          200: '#ffc7c7',
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
         },
       },
       fontFamily: {
