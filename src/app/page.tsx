@@ -13,7 +13,7 @@ import {
   Shield,
   Activity
 } from 'lucide-react';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { ErrorBoundary } from '@/app/components/ui/ErrorBoundary';
 import { Product, ApiResponse } from '@/lib/types';
 
 interface CacheMetrics {
