@@ -1,15 +1,16 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Sora } from 'next/font/google';
+import { Albert_Sans, Bungee } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ 
+const albertSans = Albert_Sans({ 
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-albert-sans',
 });
 
-const sora = Sora({ 
+const bungee = Bungee({ 
   subsets: ['latin'],
-  variable: '--font-sora',
+  weight: '400',
+  variable: '--font-bungee',
 });
 
 export const metadata: Metadata = {
@@ -38,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
+    <html lang="en" className={`${albertSans.variable} ${bungee.variable}`}>
       <body className="font-body bg-slate-900 text-white antialiased">
         {children}
       </body>

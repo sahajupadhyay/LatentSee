@@ -1,5 +1,17 @@
 import React from 'react';
 
+// Export Squares component
+export { default as Squares } from './Squares';
+
+// Export SpotlightCard component
+export { default as SpotlightCard } from './SpotlightCard';
+
+// Export BorderMagicButton component
+export { default as BorderMagicButton } from './BorderMagicButton';
+
+// Export TopNav component
+export { default as TopNav } from './TopNav';
+
 /**
  * Loading Spinner Component
  * 
