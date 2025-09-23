@@ -85,3 +85,19 @@ h1, h2, h3, h4, h5, h6 {
     @apply bg-background text-foreground;
   }
 }
+
+/* Remove focus and active styles for BorderMagicButton */
+button:focus, button:active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure no ring appears on active/focus for BorderMagicButton */
+.border-magic-button:focus, .border-magic-button:active {
+  --tw-ring-offset-width: 0 !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-shadow: none !important;
+  --tw-ring-shadow: none !important;
+  box-shadow: none !important;
+}

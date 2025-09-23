@@ -3,34 +3,30 @@ import React from 'react';
 interface BorderMagicButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   className?: string;
-  gradientColors?: string;
-  bgColor?: string;
-  textColor?: string;
+  primaryColor?: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
 const BorderMagicButton: React.FC<BorderMagicButtonProps> = ({
   children,
   className = '',
-  gradientColors = 'bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]',
-  bgColor = 'bg-black-950/80',
-  textColor = 'text-white',
+  primaryColor = '#00C6AE', // Default to accent teal
   size = 'md',
   ...props
 }) => {
-  const sizeClasses = {
-    sm: 'h-8 px-2 py-0.5 text-xs',
-    md: 'h-12 px-3 py-1 text-sm',
-    lg: 'h-14 px-4 py-2 text-base'
-  };
-
   return (
     <button 
-      className={`relative inline-flex overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50 ${sizeClasses[size]} ${className}`}
+      className={`border-magic-button relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none active:outline-none active:ring-0 transition-all duration-200 ${className}`}
+      style={{ boxShadow: 'none' }}
       {...props}
     >
-      <span className={`absolute inset-[-1000%] animate-[spin_2s_linear_infinite] ${gradientColors}`} />
-      <span className={`inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full ${bgColor} font-medium ${textColor} backdrop-blur-3xl`}>
+      <span 
+        className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite]"
+        style={{
+          background: `conic-gradient(from 90deg at 50% 50%, ${primaryColor} 0%, transparent 50%, ${primaryColor} 100%)`
+        }}
+      />
+      <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-900/80 px-3 py-1 text-sm font-medium text-white backdrop-blur-3xl">
         {children}
       </span>
     </button>

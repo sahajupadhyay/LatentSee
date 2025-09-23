@@ -54,12 +54,16 @@ const Squares: React.FC<SquaresProps> = ({
         for (let y = -squareSize; y < canvas.height + squareSize; y += squareSize) {
           const squareX = x - (gridOffset.current.x % squareSize);
           const squareY = y - (gridOffset.current.y % squareSize);
-
+          
+          // Calculate the grid position of this square
+          const gridX = Math.floor((x + gridOffset.current.x) / squareSize);
+          const gridY = Math.floor((y + gridOffset.current.y) / squareSize);
+          
           // Check if mouse is hovering over this square
           if (
             hoveredSquareRef.current &&
-            Math.floor((x + squareSize) / squareSize) === hoveredSquareRef.current.x &&
-            Math.floor((y + squareSize) / squareSize) === hoveredSquareRef.current.y
+            gridX === hoveredSquareRef.current.x &&
+            gridY === hoveredSquareRef.current.y
           ) {
             ctx.fillStyle = hoverFillColor;
             ctx.fillRect(squareX, squareY, squareSize, squareSize);
@@ -102,20 +106,12 @@ const Squares: React.FC<SquaresProps> = ({
       const rect = canvas.getBoundingClientRect();
       const mouseX = event.clientX - rect.left;
       const mouseY = event.clientY - rect.top;
-
-      const startX = Math.floor(gridOffset.current.x / squareSize) * squareSize;
-      const startY = Math.floor(gridOffset.current.y / squareSize) * squareSize;
-
-      const hoveredSquareX = Math.floor((mouseX + gridOffset.current.x - startX) / squareSize);
-      const hoveredSquareY = Math.floor((mouseY + gridOffset.current.y - startY) / squareSize);
-
-      if (
-        !hoveredSquareRef.current ||
-        hoveredSquareRef.current.x !== hoveredSquareX ||
-        hoveredSquareRef.current.y !== hoveredSquareY
-      ) {
-        hoveredSquareRef.current = { x: hoveredSquareX, y: hoveredSquareY };
-      }
+      
+      // Calculate which grid cell the mouse is over, accounting for the offset
+      const hoveredSquareX = Math.floor((mouseX + gridOffset.current.x) / squareSize);
+      const hoveredSquareY = Math.floor((mouseY + gridOffset.current.y) / squareSize);
+      
+      hoveredSquareRef.current = { x: hoveredSquareX, y: hoveredSquareY };
     };
 
     const handleMouseLeave = () => {
