@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-import { useAuth } from '@/lib/auth/context';
+import { useAuth } from '@/lib/auth';
 import { SignupFormData, SignupSchema } from '@/lib/auth/types';
 import { Squares } from '@/app/components/ui';
 import { PublicRoute } from '@/app/components/auth';

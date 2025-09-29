@@ -18,7 +18,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-import { Squares } from '@/app/components/ui';
+import { Squares, LoadingScreen } from '@/app/components/ui';
 
 /**
  * Documentation Page
@@ -41,6 +41,8 @@ interface DocSection {
 function DocsPage() {
   const [activeSection, setActiveSection] = useState('overview');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
 
   // Handle section navigation
   const scrollToSection = (sectionId: string) => {
@@ -48,6 +50,23 @@ function DocsPage() {
     const element = document.getElementById(sectionId);
     element?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Handle loading completion
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+    setTimeout(() => setShowContent(true), 100);
+  };
+
+  // Auto-complete loading after a minimum time
+  useEffect(() => {
+    const minLoadingTime = setTimeout(() => {
+      if (isLoading) {
+        handleLoadingComplete();
+      }
+    }, 1800); // Faster for docs
+
+    return () => clearTimeout(minLoadingTime);
+  }, [isLoading]);
 
   // Copy code to clipboard
   const copyToClipboard = async (code: string, id: string) => {
@@ -471,8 +490,23 @@ if (!consistencyCheck.isConsistent) {
     }
   ];
 
+  if (isLoading) {
+    return <LoadingScreen variant="docs" isLoading={isLoading} onComplete={handleLoadingComplete} />;
+  }
+
   return (
-    <div className="min-h-screen bg-primary-950 relative overflow-hidden">
+    <>
+      {showContent && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ 
+            duration: 0.5, 
+            ease: "easeOut",
+            delay: 0.05
+          }}
+          className="min-h-screen bg-primary-950 relative overflow-hidden"
+        >
       {/* Animated Background */}
       <div className="absolute inset-0">
         <Squares 
@@ -511,11 +545,11 @@ if (!consistencyCheck.isConsistent) {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-8 pt-24">
           <div className="flex gap-8">
             {/* Sidebar Navigation */}
             <div className="w-64 flex-shrink-0">
-              <div className="sticky top-8 space-y-2">
+              <div className="sticky top-24 space-y-2">
                 {sections.map((section) => (
                   <button
                     key={section.id}
@@ -587,7 +621,9 @@ if (!consistencyCheck.isConsistent) {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
+      )}
+    </>
   );
 }
 

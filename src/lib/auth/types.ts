@@ -70,6 +70,8 @@ export interface UserProfile {
   email: string;
   name: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   avatarUrl?: string;
   createdAt: string;
   updatedAt: string;

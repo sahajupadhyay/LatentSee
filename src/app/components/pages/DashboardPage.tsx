@@ -1,13 +1,15 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Squares, TopNav } from '@/app/components/ui';
+import { Squares, TopNav, LoadingScreen } from '@/app/components/ui';
 import ExecutionPage from './ExecutionPage';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
   
   // Create a ref for the execution section
   const executionSectionRef = useRef<HTMLDivElement>(null);
@@ -25,11 +27,40 @@ export default function DashboardPage() {
     router.push('/auth/signup?redirect=/dashboard&message=Create an account to explore LatentSee features');
   };
 
+  // Handle loading completion
+  const handleLoadingComplete = useCallback(() => {
+    setIsLoading(false);
+    setTimeout(() => setShowContent(true), 100);
+  }, []);
+
+  // Auto-complete loading after a minimum time (for realism)
+  useEffect(() => {
+    const minLoadingTime = setTimeout(() => {
+      if (isLoading) {
+        handleLoadingComplete();
+      }
+    }, 2500); // Minimum 2.5 seconds for the full experience
+
+    return () => clearTimeout(minLoadingTime);
+  }, [isLoading]);
+
   return (
+    <>
+      <LoadingScreen 
+        isLoading={isLoading} 
+        onComplete={handleLoadingComplete}
+        variant="home"
+      />
+      
+      {showContent && (
     <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        duration: 0.6, 
+        ease: "easeOut",
+        staggerChildren: 0.1
+      }}
       className="min-h-screen bg-primary-950 relative overflow-hidden"
     >
       {/* Top Navigation */}
@@ -47,12 +78,12 @@ export default function DashboardPage() {
       </div>
       
       {/* Hero Section */}
-      <section className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center">
+      <section className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 text-center pt-20">
         {/* Main Heading */}
         <motion.h1 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.8 }}
+          transition={{ delay: 0.1, duration: 0.6 }}
           className="text-3xl md:text-5xl font-bold text-white max-w-3xl mb-12"
         >
           How cloud systems balance speed versus correctness in e-commerce
@@ -84,5 +115,7 @@ export default function DashboardPage() {
         <ExecutionPage />
       </div>
     </motion.div>
+      )}
+    </>
   );
 }

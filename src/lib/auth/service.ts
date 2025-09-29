@@ -50,7 +50,12 @@ export class AuthService {
       return this.initializationPromise;
     }
 
-    this.initializationPromise = this.initialize();
+    // Quick timeout to prevent hanging during initialization
+    const timeout = new Promise<void>((_, reject) => 
+      setTimeout(() => reject(new Error('Auth service initialization timeout')), 2000)
+    );
+
+    this.initializationPromise = Promise.race([this.initialize(), timeout]);
     return this.initializationPromise;
   }
 
@@ -71,6 +76,12 @@ export class AuthService {
     }
 
     try {
+      this.logger.info('Creating Supabase client', {
+        hasUrl: Boolean(supabaseUrl),
+        hasKey: Boolean(supabaseAnonKey),
+        urlStart: supabaseUrl ? supabaseUrl.substring(0, 30) : 'missing'
+      });
+      
       this.client = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           autoRefreshToken: true,
@@ -85,11 +96,24 @@ export class AuthService {
         }
       });
       this.initialized = true;
-      this.logger.info('Supabase auth client initialized');
+      this.logger.info('Supabase auth client initialized successfully', {
+        clientCreated: Boolean(this.client),
+        isConfigured: this.isConfigured()
+      });
     } catch (error) {
-      this.logger.error('Failed to initialize Supabase client', error as Error);
+      this.logger.error('Failed to initialize Supabase client', error as Error, {
+        hasUrl: Boolean(supabaseUrl),
+        hasKey: Boolean(supabaseAnonKey),
+        url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing'
+      });
+      // Even if there's an error, try to create the client anyway
+      try {
+        this.client = createClient(supabaseUrl, supabaseAnonKey);
+        this.logger.warn('Supabase client created despite initialization error');
+      } catch (secondError) {
+        this.logger.error('Failed to create client even with fallback', secondError as Error);
+      }
       this.initialized = true; // Mark as initialized to prevent retry loops
-      throw error;
     }
   }
 
@@ -107,7 +131,7 @@ export class AuthService {
     const logger = createLogger(requestId);
     
     if (!this.isConfigured() || !this.client) {
-      logger.error('Auth service not configured - cannot sign in');
+      logger.error(`Auth service not configured - cannot sign in [Initialized: ${this.initialized}, HasClient: ${Boolean(this.client)}, IsConfigured: ${this.isConfigured()}, HasEnvVars: ${Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)}]`);
       return {
         success: false,
         error: {
@@ -334,6 +358,17 @@ export class AuthService {
   async getCurrentUser(requestId: string = uuidv4()): Promise<AuthUser | null> {
     const logger = createLogger(requestId);
     
+    logger.debug('getCurrentUser called', { requestId });
+    
+    try {
+      logger.debug('Ensuring auth service is initialized');
+      await this.ensureInitialized();
+      logger.debug('Auth service initialization completed');
+    } catch (error) {
+      logger.warn('Failed to initialize auth service', { error: error instanceof Error ? error.message : 'Unknown error' });
+      return null;
+    }
+    
     if (!this.isConfigured() || !this.client) {
       logger.debug('Auth service not configured - skipping user retrieval', {
         initialized: this.initialized,
@@ -343,7 +378,17 @@ export class AuthService {
     }
     
     try {
-      const { data: { user }, error } = await this.client.auth.getUser();
+      logger.debug('Calling Supabase auth.getUser()');
+      
+      // Quick timeout to prevent app from hanging (2 seconds)
+      const supabaseTimeout = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase getUser timeout')), 2000)
+      );
+      
+      const supabaseCall = this.client.auth.getUser();
+      const { data: { user }, error } = await Promise.race([supabaseCall, supabaseTimeout]);
+      
+      logger.debug('Supabase auth.getUser() completed', { hasUser: Boolean(user), hasError: Boolean(error) });
 
       if (error) {
         logger.warn('Supabase returned error for getCurrentUser', {
@@ -377,11 +422,21 @@ export class AuthService {
       return authUser;
 
     } catch (error) {
-      logger.warn('Unexpected error getting current user - likely configuration issue', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        requestId,
-        isConfigured: this.isConfigured()
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Log timeout errors as debug instead of warn since they're expected
+      if (errorMessage.includes('timeout')) {
+        logger.debug('Supabase auth timeout - continuing without authentication', {
+          error: errorMessage,
+          requestId
+        });
+      } else {
+        logger.warn('Error getting current user', {
+          error: errorMessage,
+          requestId,
+          isConfigured: this.isConfigured()
+        });
+      }
       return null;
     }
   }

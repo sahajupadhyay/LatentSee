@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Shield, ArrowRight } from 'lucide-react';
-import { useAuth } from '@/lib/auth/context';
+import { useAuth } from '@/lib/auth';
 import { RouteGuardProps } from '@/lib/auth/types';
 
 /**

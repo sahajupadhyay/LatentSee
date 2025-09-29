@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Albert_Sans, Bungee } from 'next/font/google';
-import { AuthProvider } from '@/lib/auth/context';
+import { AuthProvider } from '@/lib/auth';
 import { PerformanceDashboardProvider } from '@/lib/context/PerformanceDashboardContext';
 import './globals.css';
 

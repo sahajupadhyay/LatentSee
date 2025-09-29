@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { User, LogOut, Activity } from 'lucide-react';
-import { useAuth } from '@/lib/auth/context';
+import { useAuth } from '@/lib/auth';
 import { ProtectedRoute, AuthStatusBadge } from '@/app/components/auth';
 import { Squares } from '@/app/components/ui';
 import ExecutionPage from '@/app/components/pages/ExecutionPage';

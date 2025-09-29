@@ -9,6 +9,9 @@ export { default as SpotlightCard } from './SpotlightCard';
 // Export BorderMagicButton component
 export { default as BorderMagicButton } from './BorderMagicButton';
 
+// Export LoadingScreen component
+export { default as LoadingScreen } from './LoadingScreen';
+
 // Export TopNav component
 export { default as TopNav } from './TopNav';
 

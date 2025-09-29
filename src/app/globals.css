@@ -17,6 +17,17 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-bungee), Bungee, cursive;
 }
 
+/* Prevent flash of invisible content during hydration */
+html {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Ensure Framer Motion elements are visible by default */
+[data-framer-name] {
+  opacity: 1;
+}
+
 
 
 @layer base {

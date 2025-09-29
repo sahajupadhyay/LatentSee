@@ -1,8 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { TopNav } from '@/app/components/ui';
+import { TopNav, LoadingScreen } from '@/app/components/ui';
 import { 
   LatencyChart, 
   CacheHitRateVisualization, 
@@ -15,19 +16,50 @@ import * as Icons from 'lucide-react';
 export default function AnalyticsPage() {
   const { state } = usePerformanceDashboard();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
+
+  // Handle loading completion
+  const handleLoadingComplete = () => {
+    setIsLoading(false);
+    setTimeout(() => setShowContent(true), 100);
+  };
+
+  // Auto-complete loading after a minimum time
+  useEffect(() => {
+    const minLoadingTime = setTimeout(() => {
+      if (isLoading) {
+        handleLoadingComplete();
+      }
+    }, 2000); // Slightly faster for analytics
+
+    return () => clearTimeout(minLoadingTime);
+  }, [isLoading]);
 
   return (
+    <>
+      <LoadingScreen 
+        isLoading={isLoading} 
+        onComplete={handleLoadingComplete}
+        variant="analytics"
+      />
+      
+      {showContent && (
     <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6 }}
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        duration: 0.7, 
+        ease: "easeOut",
+        delay: 0.1
+      }}
       className="min-h-screen bg-primary-950 relative overflow-hidden"
     >
       {/* Top Navigation */}
       <TopNav />
       
       {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-6 py-8">
+      <div className="relative z-10 container mx-auto px-6 py-8 pt-24">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -184,5 +216,7 @@ export default function AnalyticsPage() {
         )}
       </div>
     </motion.div>
+      )}
+    </>
   );
 }

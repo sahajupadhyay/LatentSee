@@ -274,7 +274,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         logger.info('Initializing authentication state');
 
-        const user = await authService.getCurrentUser();
+        // Quick timeout for faster initialization (3 seconds)
+        const timeout = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 3000)
+        );
+
+        logger.debug('Starting user authentication check');
+        
+        let user = null;
+        try {
+          const userPromise = authService.getCurrentUser();
+          user = await Promise.race([userPromise, timeout]);
+          logger.debug('Auth service call completed successfully', { hasUser: Boolean(user) });
+        } catch (timeoutError) {
+          // On timeout, just continue without authentication
+          logger.info('Auth initialization timed out - app ready for guest usage', {
+            timeout: '3s',
+            hasConfig: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
+          });
+          user = null;
+        }
 
         if (isMounted) {
           if (user) {
@@ -282,14 +301,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             logger.info('Authentication state restored', { userId: user.id });
           } else {
             dispatch({ type: 'AUTH_LOADING', payload: false });
-            logger.debug('No existing session found - user not authenticated');
+            logger.debug('No existing session - ready for new authentication');
           }
         }
       } catch (error) {
-        logger.error('Failed to initialize auth state', error as Error, {
-          context: 'Auth context initialization',
-          isMounted
-        });
+        logger.warn('Auth initialization error - continuing', { error: error instanceof Error ? error.message : String(error) });
+        
+        // Always ensure app is not stuck in loading state
         if (isMounted) {
           dispatch({ type: 'AUTH_LOADING', payload: false });
         }
