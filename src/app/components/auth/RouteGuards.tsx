@@ -106,15 +106,41 @@ export const ProtectedRoute: React.FC<RouteGuardProps> = ({
   const router = useRouter();
   const pathname = usePathname();
 
+  // Debug logging to track auth state changes
+  useEffect(() => {
+    console.log('[ProtectedRoute] Auth state changed:', {
+      pathname,
+      isLoading,
+      isAuthenticated,
+      hasUser: Boolean(user),
+      userId: user?.id,
+      requireAuth,
+      timestamp: new Date().toISOString()
+    });
+  }, [isLoading, isAuthenticated, user, pathname, requireAuth]);
+
   useEffect(() => {
     if (!isLoading && requireAuth && !isAuthenticated) {
+      console.log('[ProtectedRoute] Redirecting to login:', {
+        pathname,
+        redirectTo,
+        reason: 'not authenticated',
+        timestamp: new Date().toISOString()
+      });
+      
       // Build login URL with return path
       const loginUrl = new URL(redirectTo, window.location.origin);
       loginUrl.searchParams.set('redirect', pathname);
       
       router.push(loginUrl.toString());
+    } else if (!isLoading && requireAuth && isAuthenticated) {
+      console.log('[ProtectedRoute] Access granted:', {
+        pathname,
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+      });
     }
-  }, [isLoading, requireAuth, isAuthenticated, router, redirectTo, pathname]);
+  }, [isLoading, requireAuth, isAuthenticated, router, redirectTo, pathname, user]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -228,13 +254,13 @@ export const AuthStatusBadge: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed top-4 right-4 z-50 px-3 py-2 rounded-lg text-xs font-medium backdrop-blur-sm border"
+      className="fixed bottom-4 right-4 z-50 px-2 py-1 rounded-md text-xs font-medium backdrop-blur-sm border opacity-80 hover:opacity-100 transition-opacity"
       style={{
         backgroundColor: isLoading 
-          ? 'rgba(100, 116, 139, 0.2)' 
+          ? 'rgba(100, 116, 139, 0.15)' 
           : isAuthenticated 
-            ? 'rgba(34, 197, 94, 0.2)'
-            : 'rgba(239, 68, 68, 0.2)',
+            ? 'rgba(34, 197, 94, 0.15)'
+            : 'rgba(239, 68, 68, 0.15)',
         borderColor: isLoading 
           ? 'rgb(100, 116, 139)' 
           : isAuthenticated 
@@ -250,7 +276,7 @@ export const AuthStatusBadge: React.FC = () => {
       {isLoading ? (
         'Loading...'
       ) : isAuthenticated ? (
-        `Authenticated: ${user?.email || 'Unknown'}`
+        `✓ ${user?.profile?.firstName || user?.email?.split('@')[0] || 'User'}`
       ) : (
         'Not Authenticated'
       )}

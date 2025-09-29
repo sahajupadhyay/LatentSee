@@ -58,7 +58,7 @@ function DashboardContent() {
               </div>
               <div>
                 <h1 className="text-xl font-heading font-bold text-white">
-                  Welcome back, {user?.profile?.firstName || user?.email}
+                  Welcome back, {user?.profile?.firstName || user?.profile?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User'}
                 </h1>
                 <p className="text-sm text-neutral-400">
                   Neural Dashboard • {new Date().toLocaleDateString()}
@@ -116,11 +116,14 @@ function DashboardContent() {
                   {user?.emailVerified ? 'Yes' : 'Pending'}
                 </span>
               </div>
-              {user?.profile?.firstName && (
+              {(user?.profile?.firstName || user?.profile?.name) && (
                 <div>
                   <span className="text-neutral-400">Name:</span>
                   <span className="ml-2 text-white">
-                    {user.profile.firstName} {user.profile.lastName}
+                    {user.profile.firstName && user.profile.lastName 
+                      ? `${user.profile.firstName} ${user.profile.lastName}`.trim()
+                      : user.profile.name || user.profile.fullName
+                    }
                   </span>
                 </div>
               )}

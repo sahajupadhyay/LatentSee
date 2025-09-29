@@ -50,9 +50,9 @@ export class AuthService {
       return this.initializationPromise;
     }
 
-    // Quick timeout to prevent hanging during initialization
+    // Reasonable timeout to prevent hanging during initialization
     const timeout = new Promise<void>((_, reject) => 
-      setTimeout(() => reject(new Error('Auth service initialization timeout')), 2000)
+      setTimeout(() => reject(new Error('Auth service initialization timeout')), 4000)
     );
 
     this.initializationPromise = Promise.race([this.initialize(), timeout]);
@@ -180,7 +180,7 @@ export class AuthService {
       }
 
       // Get user profile
-      const profile = await this.getUserProfile(authData.user.id, requestId);
+      const profile = await this.getUserProfile(authData.user, requestId);
       
       const authUser: AuthUser = {
         id: authData.user.id,
@@ -380,9 +380,9 @@ export class AuthService {
     try {
       logger.debug('Calling Supabase auth.getUser()');
       
-      // Quick timeout to prevent app from hanging (2 seconds)
+      // Reasonable timeout to prevent app from hanging (4 seconds)
       const supabaseTimeout = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Supabase getUser timeout')), 2000)
+        setTimeout(() => reject(new Error('Supabase getUser timeout')), 4000)
       );
       
       const supabaseCall = this.client.auth.getUser();
@@ -404,7 +404,7 @@ export class AuthService {
         return null;
       }
 
-      const profile = await this.getUserProfile(user.id, requestId);
+      const profile = await this.getUserProfile(user, requestId);
 
       const authUser = {
         id: user.id,
@@ -503,37 +503,44 @@ export class AuthService {
   }
 
   /**
-   * Get user profile from database
+   * Get user profile from user data (optimized - no additional API calls)
    */
-  private async getUserProfile(userId: string, requestId: string): Promise<UserProfile | undefined> {
+  private async getUserProfile(user: any, requestId: string): Promise<UserProfile | undefined> {
     const logger = createLogger(requestId);
     
-    if (!this.isConfigured() || !this.client) {
-      logger.debug('Auth service not configured - cannot get user profile');
+    if (!user) {
+      logger.debug('No user provided - cannot get user profile');
       return undefined;
     }
     
     try {
-      // For now, we'll construct profile from auth metadata
-      // Later, you can extend this to fetch from a profiles table
-      const { data: user } = await this.client.auth.getUser();
+      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+      let firstName = '';
+      let lastName = '';
       
-      if (!user.user) return undefined;
+      // Safely extract first and last names
+      if (fullName && typeof fullName === 'string') {
+        const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+        firstName = nameParts[0] || '';
+        lastName = nameParts.slice(1).join(' ') || '';
+      }
 
       return {
-        id: userId,
-        email: user.user.email!,
-        name: user.user.user_metadata?.name || user.user.user_metadata?.full_name || '',
-        fullName: user.user.user_metadata?.full_name || user.user.user_metadata?.name || user.user.email!,
-        avatarUrl: user.user.user_metadata?.avatar_url,
-        createdAt: user.user.created_at,
-        updatedAt: user.user.updated_at || user.user.created_at,
-        emailVerified: user.user.email_confirmed_at !== null,
-        lastSignInAt: user.user.last_sign_in_at
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.name || user.user_metadata?.full_name || '',
+        fullName: fullName || user.email!,
+        firstName: firstName,
+        lastName: lastName,
+        avatarUrl: user.user_metadata?.avatar_url,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at || user.created_at,
+        emailVerified: user.email_confirmed_at !== null,
+        lastSignInAt: user.last_sign_in_at
       };
 
     } catch (error) {
-      logger.error('Failed to get user profile', error as Error, { userId });
+      logger.error('Failed to get user profile', error as Error, { userId: user.id });
       return undefined;
     }
   }
@@ -568,7 +575,7 @@ export class AuthService {
     const { data: { subscription } } = this.client.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          const profile = await this.getUserProfile(session.user.id, uuidv4());
+          const profile = await this.getUserProfile(session.user, uuidv4());
           callback({
             id: session.user.id,
             email: session.user.email!,

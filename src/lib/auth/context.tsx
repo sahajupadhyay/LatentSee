@@ -274,9 +274,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         logger.info('Initializing authentication state');
 
-        // Quick timeout for faster initialization (3 seconds)
+        // Reasonable timeout for auth initialization (5 seconds)
         const timeout = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('Auth initialization timeout')), 3000)
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 5000)
         );
 
         logger.debug('Starting user authentication check');
@@ -288,9 +288,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           logger.debug('Auth service call completed successfully', { hasUser: Boolean(user) });
         } catch (timeoutError) {
           // On timeout, just continue without authentication
-          logger.info('Auth initialization timed out - app ready for guest usage', {
-            timeout: '3s',
-            hasConfig: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL)
+          logger.warn('Auth initialization timed out - continuing as guest', {
+            timeout: '5s',
+            hasConfig: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+            error: timeoutError instanceof Error ? timeoutError.message : String(timeoutError)
           });
           user = null;
         }
@@ -299,9 +300,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (user) {
             dispatch({ type: 'AUTH_SUCCESS', payload: user });
             logger.info('Authentication state restored', { userId: user.id });
+            console.log('[AuthContext] User authenticated during initialization:', {
+              userId: user.id,
+              email: user.email,
+              timestamp: new Date().toISOString()
+            });
           } else {
             dispatch({ type: 'AUTH_LOADING', payload: false });
             logger.debug('No existing session - ready for new authentication');
+            console.log('[AuthContext] No user found during initialization:', {
+              timestamp: new Date().toISOString()
+            });
           }
         }
       } catch (error) {
@@ -329,9 +338,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (user) {
         dispatch({ type: 'AUTH_SUCCESS', payload: user });
         logger.info('Auth state changed - user authenticated', { userId: user.id });
+        console.log('[AuthContext] Auth state change - user authenticated:', {
+          userId: user.id,
+          email: user.email,
+          timestamp: new Date().toISOString()
+        });
       } else {
         dispatch({ type: 'AUTH_SIGNOUT' });
         logger.info('Auth state changed - user signed out');
+        console.log('[AuthContext] Auth state change - user signed out:', {
+          timestamp: new Date().toISOString()
+        });
       }
     });
 
