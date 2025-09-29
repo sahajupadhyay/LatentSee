@@ -2,10 +2,13 @@
 
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { Squares, TopNav } from '@/app/components/ui';
 import ExecutionPage from './ExecutionPage';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  
   // Create a ref for the execution section
   const executionSectionRef = useRef<HTMLDivElement>(null);
   
@@ -15,6 +18,11 @@ export default function DashboardPage() {
       behavior: 'smooth',
       block: 'start'
     });
+  };
+  
+  // Navigate to auth page for Learn More
+  const handleLearnMore = () => {
+    router.push('/auth/signup?redirect=/dashboard&message=Create an account to explore LatentSee features');
   };
 
   return (
@@ -54,11 +62,14 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row gap-4">
           <button 
             onClick={scrollToExecution}
-            className="px-8 py-3 bg-white text-black font-medium rounded-full hover:bg-white/90 transition-colors"
+            className="px-8 py-3 bg-gradient-to-r from-white to-gray-100 hover:from-gray-50 hover:to-gray-200 text-black font-medium rounded-full transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl border border-white/20"
           >
             Get Started
           </button>
-          <button className="px-8 py-3 bg-white/10 text-white font-medium rounded-full border border-white/20 backdrop-blur-sm hover:bg-white/20 transition-colors">
+          <button 
+            onClick={handleLearnMore}
+            className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-full border border-white/20 backdrop-blur-sm transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
+          >
             Learn More
           </button>
         </div>

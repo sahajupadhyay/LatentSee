@@ -1,90 +1,83 @@
-import winston from 'winston';
-
 /**
- * Production-grade structured logger
+ * Universal Logging System
  * 
- * Features:
- * - Structured JSON logging for production
- * - Request ID correlation
- * - Multiple log levels
- * - Error serialization
- * - Performance timing
+ * Browser-first logger that falls back to console methods.
+ * No server-side dependencies that could cause module resolution issues.
  */
 
-// Create winston logger instance
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: {
-    service: 'smart-cloud-dashboard',
-    environment: process.env.NODE_ENV || 'development'
-  },
-  transports: [
-    // Console transport for development
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
-    })
-  ]
-});
-
-// Add file transport for production
-if (process.env.NODE_ENV === 'production') {
-  logger.add(new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error'
-  }));
-  logger.add(new winston.transports.File({
-    filename: 'logs/combined.log'
-  }));
+export interface LogContext {
+  [key: string]: any;
 }
 
-/**
- * Enhanced logger with request context
- */
 export class Logger {
-  private requestId: string;
+  private requestId?: string;
 
   constructor(requestId?: string) {
-    this.requestId = requestId || 'system';
+    this.requestId = requestId;
   }
 
-  private formatMessage(message: string, meta?: Record<string, unknown>) {
-    return {
+  private formatMessage(level: string, message: string, context?: LogContext, error?: Error): any {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      level,
       message,
       requestId: this.requestId,
-      timestamp: new Date().toISOString(),
-      ...meta
+      ...context,
+      ...(error && {
+        error: {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        }
+      })
     };
+    return logEntry;
   }
 
-  info(message: string, meta?: Record<string, unknown>) {
-    logger.info(this.formatMessage(message, meta));
+  info(message: string, context?: LogContext): void {
+    const formattedMessage = this.formatMessage('info', message, context);
+    console.info(`[INFO]`, formattedMessage);
   }
 
-  error(message: string, error?: Error, meta?: Record<string, unknown>) {
-    logger.error(this.formatMessage(message, {
-      error: error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : undefined,
-      ...meta
-    }));
+  error(message: string, error?: Error, context?: LogContext): void {
+    const formattedMessage = this.formatMessage('error', message, context, error);
+    
+    // If we have an actual error object, log it separately for better visibility
+    if (error && error instanceof Error) {
+      console.error(`[ERROR] ${message}`, {
+        ...formattedMessage,
+        errorDetails: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        }
+      });
+    } else if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+      // Handle non-Error objects that have content
+      console.error(`[ERROR] ${message}`, {
+        ...formattedMessage,
+        errorObject: error
+      });
+    } else if (error) {
+      // Handle empty objects or other falsy values
+      console.error(`[ERROR] ${message}`, {
+        ...formattedMessage,
+        note: 'Error object was empty or invalid'
+      });
+    } else {
+      // No error object provided
+      console.error(`[ERROR] ${message}`, formattedMessage);
+    }
   }
 
-  warn(message: string, meta?: Record<string, unknown>) {
-    logger.warn(this.formatMessage(message, meta));
+  warn(message: string, context?: LogContext): void {
+    const formattedMessage = this.formatMessage('warn', message, context);
+    console.warn(`[WARN]`, formattedMessage);
   }
 
-  debug(message: string, meta?: Record<string, unknown>) {
-    logger.debug(this.formatMessage(message, meta));
+  debug(message: string, context?: LogContext): void {
+    const formattedMessage = this.formatMessage('debug', message, context);
+    console.debug(`[DEBUG]`, formattedMessage);
   }
 
   /**
@@ -93,7 +86,7 @@ export class Logger {
   async timeFunction<T>(
     functionName: string, 
     fn: () => Promise<T>, 
-    meta?: Record<string, unknown>
+    context?: LogContext
   ): Promise<T> {
     const startTime = performance.now();
     try {
@@ -101,18 +94,26 @@ export class Logger {
       const duration = performance.now() - startTime;
       this.info(`Function ${functionName} completed`, {
         duration: Math.round(duration * 100) / 100,
-        ...meta
+        ...context
       });
       return result;
     } catch (error) {
       const duration = performance.now() - startTime;
       this.error(`Function ${functionName} failed`, error as Error, {
         duration: Math.round(duration * 100) / 100,
-        ...meta
+        ...context
       });
       throw error;
     }
   }
 }
 
-export const createLogger = (requestId?: string) => new Logger(requestId);
+/**
+ * Create a new logger instance with optional request correlation ID
+ */
+export function createLogger(requestId?: string): Logger {
+  return new Logger(requestId);
+}
+
+// Default logger instance
+export const logger = createLogger();

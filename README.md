@@ -202,7 +202,32 @@ DB_MAX_RETRIES=3                 # retry attempts
 NODE_ENV=development             # environment
 ```
 
-## 📈 Monitoring
+## � Troubleshooting
+
+### Common Issues
+
+**Authentication Errors**
+```
+[ERROR] Auth service not configured - Supabase environment variables missing
+```
+
+**Solution**: Ensure you have properly configured your `.env.local` file with valid Supabase credentials:
+1. Copy `.env.local.example` to `.env.local`
+2. Add your actual Supabase project URL and anon key
+3. Restart your development server with `npm run dev`
+
+**Empty Error Messages**
+If you see empty error objects `[ERROR] {}`, this usually indicates:
+- Missing environment variables
+- Network connectivity issues
+- Invalid Supabase configuration
+
+**Database Connection Issues**
+- Verify your Supabase project is active
+- Check that your API keys haven't expired
+- Ensure your Supabase project has the required tables
+
+## �📈 Monitoring
 
 ### Health Checks
 

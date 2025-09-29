@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Albert_Sans, Bungee } from 'next/font/google';
+import { AuthProvider } from '@/lib/auth/context';
+import { PerformanceDashboardProvider } from '@/lib/context/PerformanceDashboardContext';
 import './globals.css';
 
 const albertSans = Albert_Sans({ 
@@ -41,7 +43,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${albertSans.variable} ${bungee.variable}`}>
       <body className="font-body bg-slate-900 text-white antialiased">
-        {children}
+        <AuthProvider>
+          <PerformanceDashboardProvider>
+            {children}
+          </PerformanceDashboardProvider>
+        </AuthProvider>
       </body>
     </html>
   );

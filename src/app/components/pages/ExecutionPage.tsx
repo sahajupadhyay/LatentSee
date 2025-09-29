@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as Icons from 'lucide-react';
 import { Product, ApiResponse } from '@/lib/types';
 import { Squares, SpotlightCard, BorderMagicButton } from '@/app/components/ui';
+import { usePerformanceDashboard } from '@/app/components/dashboard';
+import { useRouter } from 'next/navigation';
 
 interface CacheMetrics {
   status?: string;
@@ -133,52 +135,66 @@ const ConsistencyCard = ({
   );
 };
 
-// Metrics Panel Component
-const MetricsPanel = ({ metrics, responseTime }: { 
+// Quick Metrics Panel Component
+const QuickMetricsPanel = ({ metrics, responseTime }: { 
   metrics: CacheMetrics | null; 
   responseTime?: number;
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="bg-primary-900/50 backdrop-blur-sm border border-primary-700/30 rounded-2xl p-6 shadow-lg"
-  >
-    <div className="flex items-center gap-3 mb-4">
-      <Icons.Activity className="w-5 h-5 text-accent-400" />
-      <h3 className="text-xl font-heading font-semibold text-white">Performance Metrics</h3>
-    </div>
-    
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div className="text-center">
-        <div className="text-2xl font-bold text-accent-400 mb-1">
-          {responseTime ? `${responseTime}ms` : '--'}
+}) => {
+  const router = useRouter();
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-primary-900/50 backdrop-blur-sm border border-primary-700/30 rounded-2xl p-6 shadow-lg"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Icons.Activity className="w-5 h-5 text-accent-400" />
+          <h3 className="text-xl font-heading font-semibold text-white">Performance Metrics</h3>
         </div>
-        <div className="text-sm text-neutral-400">Response Time</div>
+        <button
+          onClick={() => router.push('/analytics')}
+          className="flex items-center gap-2 px-4 py-2 bg-accent-500/20 hover:bg-accent-500/30 border border-accent-400/30 hover:border-accent-400/50 rounded-lg transition-all text-sm text-accent-300 hover:text-accent-200"
+        >
+          <Icons.BarChart3 className="w-4 h-4" />
+          View Full Analytics
+          <Icons.ArrowRight className="w-4 h-4" />
+        </button>
       </div>
       
-      <div className="text-center">
-        <div className="text-2xl font-bold text-secondary-400 mb-1">
-          {metrics?.hitRate || '--'}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-accent-400 mb-1">
+            {responseTime ? `${responseTime}ms` : '--'}
+          </div>
+          <div className="text-sm text-neutral-400">Response Time</div>
         </div>
-        <div className="text-sm text-neutral-400">Cache Hit Rate</div>
-      </div>
-      
-      <div className="text-center">
-        <div className="text-2xl font-bold text-alert-400 mb-1">
-          {metrics?.fromCache || '--'}
+        
+        <div className="text-center">
+          <div className="text-2xl font-bold text-secondary-400 mb-1">
+            {metrics?.hitRate || '--'}
+          </div>
+          <div className="text-sm text-neutral-400">Cache Hit Rate</div>
         </div>
-        <div className="text-sm text-neutral-400">From Cache</div>
-      </div>
-      
-      <div className="text-center">
-        <div className="text-2xl font-bold text-accent-300 mb-1">
-          {metrics?.efficiency || '--'}
+        
+        <div className="text-center">
+          <div className="text-2xl font-bold text-alert-400 mb-1">
+            {metrics?.fromCache || '--'}
+          </div>
+          <div className="text-sm text-neutral-400">From Cache</div>
         </div>
-        <div className="text-sm text-neutral-400">Efficiency</div>
+        
+        <div className="text-center">
+          <div className="text-2xl font-bold text-accent-300 mb-1">
+            {metrics?.efficiency || '--'}
+          </div>
+          <div className="text-sm text-neutral-400">Efficiency</div>
+        </div>
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 // Product Grid Component
 const ProductGrid = ({ products }: { products: Product[] }) => (
@@ -241,6 +257,8 @@ const ProductGrid = ({ products }: { products: Product[] }) => (
 );
 
 export default function ExecutionPage() {
+  const { addMetric } = usePerformanceDashboard();
+  const router = useRouter();
   const [state, setState] = useState<ExecutionState>({
     data: null,
     error: null,
@@ -263,8 +281,9 @@ export default function ExecutionPage() {
         headers: { 'Accept': 'application/json' }
       });
       const endTime = Date.now();
+      const currentResponseTime = endTime - startTime;
       
-      setResponseTime(endTime - startTime);
+      setResponseTime(currentResponseTime);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -285,6 +304,20 @@ export default function ExecutionPage() {
         efficiency: response.headers.get('X-Cache-Efficiency') || undefined,
       };
 
+      // Add metric to performance dashboard
+      addMetric({
+        modelName: mode as 'Neural Authority' | 'Neural Cache' | 'Smart Memory',
+        endpoint,
+        responseTime: currentResponseTime,
+        cacheStatus: (cacheMetrics.status as any) || 'MISS',
+        cachePolicy: cacheMetrics.policy || 'none',
+        hitRate: parseFloat(cacheMetrics.hitRate?.replace('%', '') || '0'),
+        fromCache: cacheMetrics.fromCache === 'true',
+        efficiency: cacheMetrics.efficiency || 'standard',
+        requestId: result.metadata?.requestId || `req_${Date.now()}`,
+        dataCount: (result.data as Product[])?.length || 0
+      });
+
       setState(prev => ({
         ...prev,
         data: result.data || [],
@@ -300,7 +333,7 @@ export default function ExecutionPage() {
         isLoading: false
       }));
     }
-  }, []);
+  }, [addMetric]);
 
   const consistencyModels = [
     {
@@ -377,10 +410,10 @@ export default function ExecutionPage() {
         )}
       </AnimatePresence>
 
-      {/* Metrics Panel */}
+      {/* Quick Metrics Panel */}
       {(state.cacheMetrics || responseTime) && (
         <div className="mb-8">
-          <MetricsPanel metrics={state.cacheMetrics} responseTime={responseTime} />
+          <QuickMetricsPanel metrics={state.cacheMetrics} responseTime={responseTime} />
         </div>
       )}
 
