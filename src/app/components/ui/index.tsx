@@ -9,6 +9,12 @@ export { default as SpotlightCard } from './SpotlightCard';
 // Export BorderMagicButton component
 export { default as BorderMagicButton } from './BorderMagicButton';
 
+// Export AIInsights component
+export { AIInsights } from './AIInsights';
+
+// Export AIInsightsPreview component
+export { AIInsightsPreview } from './AIInsightsPreview';
+
 // Export LoadingScreen component
 export { default as LoadingScreen } from './LoadingScreen';
 

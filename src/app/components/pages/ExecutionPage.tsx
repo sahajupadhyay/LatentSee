@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as Icons from 'lucide-react';
 import { Product, ApiResponse } from '@/lib/types';
-import { Squares, SpotlightCard, BorderMagicButton } from '@/app/components/ui';
+import { Squares, SpotlightCard, BorderMagicButton, AIInsights, AIInsightsPreview } from '@/app/components/ui';
 import { usePerformanceDashboard } from '@/app/components/dashboard';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { userProfileService } from '@/lib/userProfile';
+import { aiService } from '@/lib/ai';
+import { createAIMetricFromExecution, getAIAnalysisButtonText, hasEnoughMetricsForAnalysis } from '@/lib/ai/ui-integration';
+import type { PerformanceMetrics } from '@/lib/ai/types';
 
 interface CacheMetrics {
   status?: string;
@@ -28,6 +31,8 @@ interface ExecutionState {
   cacheMetrics: CacheMetrics | null;
   selectedProduct: Product | null;
   lastFetchMode: string | null;
+  showAIInsights: boolean;
+  aiMetrics: PerformanceMetrics[];
 }
 
 // Professional Consistency Model Card using SpotlightCard
@@ -272,10 +277,34 @@ export default function ExecutionPage() {
     requestMetadata: null,
     cacheMetrics: null,
     selectedProduct: null,
-    lastFetchMode: null
+    lastFetchMode: null,
+    showAIInsights: false,
+    aiMetrics: []
   });
 
   const [responseTime, setResponseTime] = useState<number>();
+
+  // AI insights functionality
+  const budgetStatus = useMemo(() => {
+    try {
+      const budget = aiService.getBudgetStatus();
+      return budget.status;
+    } catch {
+      return 'safe' as const;
+    }
+  }, [state.aiMetrics.length]); // Re-check when metrics change
+
+  const aiButtonConfig = useMemo(() => {
+    return getAIAnalysisButtonText(state.aiMetrics.length, budgetStatus);
+  }, [state.aiMetrics.length, budgetStatus]);
+
+  const handleShowAIInsights = useCallback(() => {
+    setState(prev => ({ ...prev, showAIInsights: true }));
+  }, []);
+
+  const handleCloseAIInsights = useCallback(() => {
+    setState(prev => ({ ...prev, showAIInsights: false }));
+  }, []);
 
   const handleApiCall = useCallback(async (endpoint: string, mode: string) => {
     try {
@@ -349,19 +378,41 @@ export default function ExecutionPage() {
         }, metricData.requestId);
       }
 
+      // Create AI metric for this test
+      const aiMetric = createAIMetricFromExecution(
+        mode as 'Neural Authority' | 'Neural Cache' | 'Smart Memory',
+        endpoint,
+        currentResponseTime,
+        cacheMetrics,
+        (result.data as Product[])?.length || 0,
+        false
+      );
+
       setState(prev => ({
         ...prev,
         data: result.data || [],
         isLoading: false,
         requestMetadata: result.metadata,
-        cacheMetrics
+        cacheMetrics,
+        aiMetrics: [...prev.aiMetrics, aiMetric]
       }));
 
     } catch (error) {
+      // Create AI metric for failed request
+      const errorMetric = createAIMetricFromExecution(
+        (state.lastFetchMode || 'Neural Authority') as 'Neural Authority' | 'Neural Cache' | 'Smart Memory',
+        endpoint,
+        responseTime || 0,
+        null,
+        0,
+        true
+      );
+
       setState(prev => ({
         ...prev,
         error: error instanceof Error ? error.message : 'An unknown error occurred',
-        isLoading: false
+        isLoading: false,
+        aiMetrics: [...prev.aiMetrics, errorMetric]
       }));
     }
   }, [addMetric, isAuthenticated, user?.id]);
@@ -431,7 +482,7 @@ export default function ExecutionPage() {
           )}
         </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto" data-testid="consistency-models">
           {consistencyModels.map((model, index) => (
             <motion.div
               key={model.title}
@@ -449,6 +500,58 @@ export default function ExecutionPage() {
           ))}
         </div>
       </motion.div>
+
+      {/* AI Insights Preview - Show when no tests have been run yet */}
+      {state.aiMetrics.length === 0 && (
+        <AIInsightsPreview 
+          metricsCount={state.aiMetrics.length}
+          onRunTest={() => {
+            // Scroll to consistency models
+            const element = document.querySelector('[data-testid="consistency-models"]');
+            element?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
+      )}
+
+      {/* AI Insights Button */}
+      {state.aiMetrics.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.6 }}
+          className="mb-8 text-center"
+        >
+          <div className="inline-flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <Icons.Brain className="text-blue-400" size={20} />
+              <span className="text-sm text-neutral-200">
+                Ready for AI-powered insights from your {state.aiMetrics.length} test{state.aiMetrics.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <button
+              onClick={handleShowAIInsights}
+              disabled={aiButtonConfig.disabled}
+              title={aiButtonConfig.tooltip}
+              className={`px-6 py-2 rounded-lg font-medium text-sm transition-all ${
+                aiButtonConfig.disabled
+                  ? 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 transform hover:scale-105'
+              }`}
+            >
+              {aiButtonConfig.text}
+            </button>
+            {budgetStatus !== 'safe' && (
+              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                budgetStatus === 'warning' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                budgetStatus === 'critical' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                'bg-red-500/10 text-red-400 border border-red-500/20'
+              }`}>
+                Budget: {budgetStatus}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Error Display */}
       <AnimatePresence>
@@ -478,6 +581,13 @@ export default function ExecutionPage() {
       {state.data && state.data.length > 0 && (
         <ProductGrid products={state.data} />
       )}
+
+      {/* AI Insights Modal */}
+      <AIInsights
+        metrics={state.aiMetrics}
+        isVisible={state.showAIInsights}
+        onClose={handleCloseAIInsights}
+      />
     </div>
   );
 }

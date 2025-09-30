@@ -25,6 +25,7 @@
     "next": "15.5.3",
     "next-logger": "^5.0.1",
     "node-cache": "^5.1.2",
+    "openai": "^5.23.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "^3.2.1",
