@@ -39,6 +39,29 @@ export default function TestPage() {
         <p><strong>Supabase Key:</strong> {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing'}</p>
       </div>
 
+      <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f8ff' }}>
+        <h3>Debug Actions:</h3>
+        <button 
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              localStorage.clear();
+              window.location.reload();
+            }
+          }}
+          style={{ padding: '8px 16px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', marginRight: '10px', cursor: 'pointer' }}
+        >
+          Clear Auth Storage & Reload
+        </button>
+        <button 
+          onClick={() => {
+            console.log('LocalStorage contents:', Object.keys(localStorage).map(key => ({ key, value: localStorage.getItem(key) })));
+          }}
+          style={{ padding: '8px 16px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          Log Storage Contents
+        </button>
+      </div>
+
       <div style={{ marginTop: '20px' }}>
         <a href="/auth/login" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', textDecoration: 'none', marginRight: '10px' }}>
           Go to Login

@@ -287,12 +287,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
           user = await Promise.race([userPromise, timeout]);
           logger.debug('Auth service call completed successfully', { hasUser: Boolean(user) });
         } catch (timeoutError) {
-          // On timeout, just continue without authentication
-          logger.warn('Auth initialization timed out - continuing as guest', {
-            timeout: '5s',
-            hasConfig: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-            error: timeoutError instanceof Error ? timeoutError.message : String(timeoutError)
-          });
+          const errorMessage = timeoutError instanceof Error ? timeoutError.message : String(timeoutError);
+          
+          // Handle specific refresh token errors
+          if (errorMessage.includes('refresh') || errorMessage.includes('Invalid Refresh Token')) {
+            logger.warn('Refresh token error during initialization - clearing auth state', {
+              error: errorMessage
+            });
+            // Clear auth storage and continue as guest
+            if (typeof window !== 'undefined') {
+              Object.keys(localStorage).forEach(key => {
+                if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+                  localStorage.removeItem(key);
+                }
+              });
+            }
+          } else {
+            // On timeout, just continue without authentication
+            logger.warn('Auth initialization timed out - continuing as guest', {
+              timeout: '5s',
+              hasConfig: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+              error: errorMessage
+            });
+          }
           user = null;
         }
 

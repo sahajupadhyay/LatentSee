@@ -16,6 +16,19 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
     // Log the error to monitoring service
     console.error('Global Error Boundary:', error);
     
+    // Handle specific auth errors
+    if (error.message.includes('refresh') || error.message.includes('Invalid Refresh Token')) {
+      console.warn('Auth token error detected - clearing storage');
+      // Clear auth storage on refresh token errors
+      if (typeof window !== 'undefined') {
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('supabase') || key.includes('auth') || key.includes('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
+    }
+    
     // In production, you would send this to your monitoring service
     if (process.env.NODE_ENV === 'production') {
       // Example: Analytics.track('error', { message: error.message, stack: error.stack });

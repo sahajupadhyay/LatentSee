@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '@/lib/logger';
+import { authUtils } from './utils';
 import {
   AuthUser,
   AuthResponse,
@@ -87,7 +88,10 @@ export class AuthService {
           autoRefreshToken: true,
           persistSession: true,
           storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-          flowType: 'pkce' // More secure flow for web applications
+          flowType: 'pkce', // More secure flow for web applications
+          detectSessionInUrl: true,
+          storageKey: 'sb-auth-token',
+          debug: process.env.NODE_ENV === 'development'
         },
         global: {
           headers: {
@@ -391,11 +395,21 @@ export class AuthService {
       logger.debug('Supabase auth.getUser() completed', { hasUser: Boolean(user), hasError: Boolean(error) });
 
       if (error) {
-        logger.warn('Supabase returned error for getCurrentUser', {
-          errorMessage: error.message,
-          errorCode: error.status || 'unknown',
-          requestId 
-        });
+        // Handle specific refresh token errors
+        if (error.message.includes('refresh') || error.message.includes('Invalid Refresh Token')) {
+          logger.warn('Invalid refresh token detected - clearing session', {
+            errorMessage: error.message,
+            requestId 
+          });
+          // Clear the invalid session
+          await this.clearInvalidSession();
+        } else {
+          logger.warn('Supabase returned error for getCurrentUser', {
+            errorMessage: error.message,
+            errorCode: error.status || 'unknown',
+            requestId 
+          });
+        }
         return null;
       }
 
@@ -574,21 +588,63 @@ export class AuthService {
 
     const { data: { subscription } } = this.client.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          const profile = await this.getUserProfile(session.user, uuidv4());
-          callback({
-            id: session.user.id,
-            email: session.user.email!,
-            emailVerified: session.user.email_confirmed_at !== null,
-            profile
-          });
-        } else {
+        try {
+          // Handle different auth events
+          if (event === 'TOKEN_REFRESHED') {
+            this.logger.debug('Auth token refreshed successfully');
+          } else if (event === 'SIGNED_OUT') {
+            this.logger.debug('User signed out');
+            callback(null);
+            return;
+          }
+
+          if (session?.user) {
+            const profile = await this.getUserProfile(session.user, uuidv4());
+            callback({
+              id: session.user.id,
+              email: session.user.email!,
+              emailVerified: session.user.email_confirmed_at !== null,
+              profile
+            });
+          } else {
+            callback(null);
+          }
+        } catch (error) {
+          // Handle token refresh and other auth errors gracefully
+          if (error instanceof Error && error.message.includes('refresh')) {
+            this.logger.warn('Token refresh failed - clearing auth state', {
+              error: error.message,
+              event
+            });
+            // Clear potentially invalid session
+            await this.clearInvalidSession();
+          } else {
+            this.logger.error('Auth state change error', error as Error);
+          }
           callback(null);
         }
       }
     );
 
     return () => subscription.unsubscribe();
+  }
+
+  /**
+   * Clear invalid session data
+   */
+  private async clearInvalidSession(): Promise<void> {
+    try {
+      if (this.client) {
+        await this.client.auth.signOut();
+      }
+      
+      // Clear all auth storage using utilities
+      authUtils.clearAuthStorage();
+      
+      this.logger.debug('Invalid session cleared successfully');
+    } catch (error) {
+      this.logger.debug('Error clearing invalid session', error as Error);
+    }
   }
 }
 
