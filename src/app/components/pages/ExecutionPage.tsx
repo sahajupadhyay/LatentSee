@@ -7,6 +7,9 @@ import { Product, ApiResponse } from '@/lib/types';
 import { Squares, SpotlightCard, BorderMagicButton } from '@/app/components/ui';
 import { usePerformanceDashboard } from '@/app/components/dashboard';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAuth } from '@/lib/auth';
+import { userProfileService } from '@/lib/userProfile';
 
 interface CacheMetrics {
   status?: string;
@@ -141,6 +144,7 @@ const QuickMetricsPanel = ({ metrics, responseTime }: {
   responseTime?: number;
 }) => {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   
   return (
     <motion.div
@@ -154,11 +158,12 @@ const QuickMetricsPanel = ({ metrics, responseTime }: {
           <h3 className="text-xl font-heading font-semibold text-white">Performance Metrics</h3>
         </div>
         <button
-          onClick={() => router.push('/analytics')}
+          onClick={() => router.push(isAuthenticated ? '/dashboard' : '/analytics')}
           className="flex items-center gap-2 px-4 py-2 bg-accent-500/20 hover:bg-accent-500/30 border border-accent-400/30 hover:border-accent-400/50 rounded-lg transition-all text-sm text-accent-300 hover:text-accent-200"
+          title={isAuthenticated ? "View your personal dashboard" : "View public analytics"}
         >
           <Icons.BarChart3 className="w-4 h-4" />
-          View Full Analytics
+          {isAuthenticated ? 'View Dashboard' : 'View Full Analytics'}
           <Icons.ArrowRight className="w-4 h-4" />
         </button>
       </div>
@@ -259,6 +264,7 @@ const ProductGrid = ({ products }: { products: Product[] }) => (
 export default function ExecutionPage() {
   const { addMetric } = usePerformanceDashboard();
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
   const [state, setState] = useState<ExecutionState>({
     data: null,
     error: null,
@@ -305,7 +311,7 @@ export default function ExecutionPage() {
       };
 
       // Add metric to performance dashboard
-      addMetric({
+      const metricData = {
         modelName: mode as 'Neural Authority' | 'Neural Cache' | 'Smart Memory',
         endpoint,
         responseTime: currentResponseTime,
@@ -316,7 +322,32 @@ export default function ExecutionPage() {
         efficiency: cacheMetrics.efficiency || 'standard',
         requestId: result.metadata?.requestId || `req_${Date.now()}`,
         dataCount: (result.data as Product[])?.length || 0
-      });
+      };
+      
+      addMetric(metricData);
+
+      // Save to user profile if authenticated
+      if (isAuthenticated && user?.id) {
+        const consistencyModelMapping = {
+          'Neural Authority': 'neural_authority',
+          'Neural Cache': 'neural_cache', 
+          'Smart Memory': 'smart_memory'
+        } as const;
+
+        await userProfileService.recordPerformanceMetric({
+          user_id: user.id,
+          request_id: metricData.requestId,
+          consistency_model: consistencyModelMapping[metricData.modelName],
+          endpoint: metricData.endpoint,
+          latency: metricData.responseTime,
+          cache_status: metricData.cacheStatus,
+          response_size: JSON.stringify(result.data || []).length,
+          user_agent: navigator.userAgent,
+          request_params: {},
+          response_headers: Object.fromEntries(response.headers.entries()),
+          error_occurred: false
+        }, metricData.requestId);
+      }
 
       setState(prev => ({
         ...prev,
@@ -333,7 +364,7 @@ export default function ExecutionPage() {
         isLoading: false
       }));
     }
-  }, [addMetric]);
+  }, [addMetric, isAuthenticated, user?.id]);
 
   const consistencyModels = [
     {
@@ -369,10 +400,36 @@ export default function ExecutionPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.6 }}
-          className="text-4xl font-heading font-bold mb-12 text-center text-white"
+          className="text-4xl font-heading font-bold mb-8 text-center text-white"
         >
           Neural Consistency Models
         </motion.h2>
+
+        {/* User Status Indicator */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="text-center mb-8"
+        >
+          {isAuthenticated && user ? (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-400/30 rounded-full text-sm">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-green-300">
+                Logged in as {user.profile?.firstName || user.email?.split('@')[0]} • Metrics being saved to your profile
+              </span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-400/30 rounded-full text-sm">
+              <Icons.Info className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-300">
+                <Link href="/auth/login" className="hover:text-blue-200 underline">
+                  Login
+                </Link> to save your performance metrics and track research sessions
+              </span>
+            </div>
+          )}
+        </motion.div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {consistencyModels.map((model, index) => (

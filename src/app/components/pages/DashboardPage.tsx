@@ -4,10 +4,12 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Squares, TopNav, LoadingScreen } from '@/app/components/ui';
+import { useAuth } from '@/lib/auth';
 import ExecutionPage from './ExecutionPage';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
   
@@ -22,9 +24,13 @@ export default function DashboardPage() {
     });
   };
   
-  // Navigate to auth page for Learn More
+  // Navigate based on auth state
   const handleLearnMore = () => {
-    router.push('/auth/signup?redirect=/dashboard&message=Create an account to explore LatentSee features');
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    } else {
+      router.push('/auth/signup?redirect=/dashboard&message=Create an account to explore LatentSee features');
+    }
   };
 
   // Handle loading completion
@@ -95,15 +101,27 @@ export default function DashboardPage() {
             onClick={scrollToExecution}
             className="px-8 py-3 bg-gradient-to-r from-white to-gray-100 hover:from-gray-50 hover:to-gray-200 text-black font-medium rounded-full transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl border border-white/20"
           >
-            Get Started
+            {isAuthenticated ? 'Test Models' : 'Get Started'}
           </button>
           <button 
             onClick={handleLearnMore}
             className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-medium rounded-full border border-white/20 backdrop-blur-sm transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
           >
-            Learn More
+            {isAuthenticated ? 'View Dashboard' : 'Learn More'}
           </button>
         </div>
+        
+        {/* Welcome message for authenticated users */}
+        {isAuthenticated && user && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="mt-8 px-6 py-3 bg-green-500/10 border border-green-400/30 rounded-full text-sm text-green-300"
+          >
+            Welcome back, {user.profile?.firstName || user.email?.split('@')[0]}! Your metrics are being saved automatically.
+          </motion.div>
+        )}
       </section>
       
       {/* Execution Page Section */}
