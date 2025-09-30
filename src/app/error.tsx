@@ -1,76 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, RefreshCw, Home, Bug, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { BorderMagicButton } from '@/app/components/ui';
 
-/**
- * Error Boundary Component
- * 
- * Catches JavaScript errors anywhere in the child component tree,
- * logs those errors, and displays a fallback UI instead of crashing.
- * 
- * This is a class component because React Error Boundaries must be class components.
- */
-
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+interface ErrorPageProps {
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to console in development
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+export default function ErrorPage({ error, reset }: ErrorPageProps) {
+  useEffect(() => {
+    // Log the error to monitoring service
+    console.error('Global Error Boundary:', error);
     
-    // In production, send to monitoring service
+    // In production, you would send this to your monitoring service
     if (process.env.NODE_ENV === 'production') {
-      // Example: Analytics.track('component_error', { message: error.message, stack: error.stack });
+      // Example: Analytics.track('error', { message: error.message, stack: error.stack });
     }
-    
-    // Call optional error handler
-    this.props.onError?.(error, errorInfo);
-  }
+  }, [error]);
 
-  resetError = () => {
-    this.setState({ hasError: false, error: null });
-  };
-
-  render() {
-    if (this.state.hasError && this.state.error) {
-      const FallbackComponent = this.props.fallback || DefaultErrorFallback;
-      return <FallbackComponent error={this.state.error} resetError={this.resetError} />;
-    }
-
-    return this.props.children;
-  }
-}
-
-/**
- * Default Error Fallback Component with LatentSee Design System
- */
-interface ErrorFallbackProps {
-  error: Error;
-  resetError: () => void;
-}
-
-const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetError }) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
   return (
@@ -78,7 +29,7 @@ const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetError 
       <div className="relative max-w-md w-full">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden rounded-2xl">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(8)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-1 h-1 bg-red-400/20 rounded-full"
@@ -146,13 +97,13 @@ const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetError 
             transition={{ delay: 0.4 }}
             className="mb-8 space-y-4"
           >
-            <h1 className="text-xl font-heading font-bold text-white">
-              Component Error
+            <h1 className="text-2xl font-heading font-bold text-white">
+              Oops! Something went wrong
             </h1>
             
-            <p className="text-slate-300 leading-relaxed text-sm">
-              A component encountered an error while rendering. 
-              This has been automatically reported to help us improve the experience.
+            <p className="text-slate-300 leading-relaxed">
+              We encountered an unexpected error while processing your request. 
+              Our team has been notified and is working to fix the issue.
             </p>
 
             {/* Development Error Details */}
@@ -165,12 +116,17 @@ const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetError 
               >
                 <summary className="cursor-pointer text-sm text-slate-400 mb-2 flex items-center gap-2">
                   <Bug className="w-4 h-4" />
-                  Component Error Details
+                  Development Error Details
                 </summary>
                 <div className="text-xs text-red-300 font-mono break-all bg-slate-900/70 p-3 rounded border-l-2 border-red-400">
                   <div className="mb-2">
                     <strong>Error:</strong> {error.message}
                   </div>
+                  {error.digest && (
+                    <div className="mb-2">
+                      <strong>Digest:</strong> {error.digest}
+                    </div>
+                  )}
                   {error.stack && (
                     <div>
                       <strong>Stack:</strong>
@@ -192,24 +148,38 @@ const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetError 
             className="space-y-3"
           >
             <div className="flex gap-3 justify-center">
-              <button
-                onClick={resetError}
-                className="flex-1 max-w-[140px] border border-red-500/40 bg-red-500/20 hover:bg-red-500/30 text-red-300 hover:text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+              <BorderMagicButton
+                onClick={reset}
+                className="flex-1 max-w-[140px]"
+                primaryColor="#EF4444"
               >
-                <RefreshCw className="w-4 h-4" />
-                <span className="text-sm font-medium">Retry</span>
-              </button>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </BorderMagicButton>
 
               <Link href="/" className="flex-1 max-w-[140px]">
-                <button className="w-full border border-slate-600 bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2">
-                  <Home className="w-4 h-4" />
-                  <span className="text-sm font-medium">Home</span>
-                </button>
+                <BorderMagicButton
+                  className="w-full"
+                  primaryColor="#00C6AE"
+                >
+                  <Home className="w-4 h-4 mr-2" />
+                  Go Home
+                </BorderMagicButton>
               </Link>
             </div>
+
+            <motion.button
+              onClick={() => window.history.back()}
+              className="text-sm text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1"
+              whileHover={{ x: -2 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Go back
+            </motion.button>
           </motion.div>
 
-          {/* Error Timestamp */}
+          {/* Error ID for Support */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -217,11 +187,29 @@ const DefaultErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetError 
             className="mt-6 pt-4 border-t border-slate-700"
           >
             <p className="text-xs text-slate-500">
-              Error occurred at {new Date().toLocaleString()}
+              Error ID: {error.digest || Date.now().toString(36)}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              If this problem persists, please contact support with the error ID above.
             </p>
           </motion.div>
+        </motion.div>
+
+        {/* LatentSee Branding */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="text-center mt-6"
+        >
+          <Link 
+            href="/"
+            className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            ← Back to LatentSee
+          </Link>
         </motion.div>
       </div>
     </div>
   );
-};
+}

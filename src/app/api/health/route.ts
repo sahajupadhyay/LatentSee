@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
 import { createLogger } from '@/lib/logger';
+import { addRateLimitHeaders, getRateLimitStats } from '@/lib/rateLimit';
+import { applySecurityHeaders, createPreflightResponse, SECURITY_PROFILES } from '@/lib/security';
 
 /**
  * Health Check Endpoint
@@ -26,13 +28,21 @@ interface HealthCheckResponse {
       status: 'up';
       responseTime: number;
     };
+    rateLimit: {
+      status: 'operational';
+      stats: {
+        totalKeys: number;
+        activeKeys: number;
+        memoryUsage: number;
+      };
+    };
   };
   uptime: number;
 }
 
 const startTime = Date.now();
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const requestId = uuidv4();
   const logger = createLogger(requestId);
   const checkStartTime = performance.now();
@@ -51,6 +61,10 @@ export async function GET(): Promise<NextResponse> {
       api: {
         status: 'up',
         responseTime: 0
+      },
+      rateLimit: {
+        status: 'operational',
+        stats: getRateLimitStats()
       }
     },
     uptime: Math.round((Date.now() - startTime) / 1000)
@@ -97,12 +111,19 @@ export async function GET(): Promise<NextResponse> {
     responseTime: response.checks.api.responseTime
   });
 
-  return NextResponse.json(response, {
+  const healthResponse = NextResponse.json(response, {
     status: httpStatus,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
       'X-Request-ID': requestId
     }
   });
+
+  // Apply security headers using the PUBLIC_API profile
+  return applySecurityHeaders(healthResponse, request, SECURITY_PROFILES.PUBLIC_API);
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest): Promise<NextResponse> {
+  return createPreflightResponse(request, SECURITY_PROFILES.PUBLIC_API);
 }
