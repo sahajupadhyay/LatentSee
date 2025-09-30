@@ -16,13 +16,13 @@ const bungee = Bungee({
 });
 
 export const metadata: Metadata = {
-  title: 'LatentSee - AI-Powered E-commerce Insights',
+  title: 'LatentSee',
   description: 'Discover hidden patterns in real-time: See how cloud systems balance speed vs correctness in e-commerce scenarios',
   keywords: ['AI', 'e-commerce', 'insights', 'neural caching', 'real-time analytics', 'latency analysis'],
   authors: [{ name: 'LatentSee Team' }],
   robots: 'index, follow',
   openGraph: {
-    title: 'LatentSee - AI-Powered E-commerce Insights',
+    title: 'LatentSee',
     description: 'Discover hidden patterns in real-time: See how cloud systems balance speed vs correctness in e-commerce scenarios',
     type: 'website',
     locale: 'en_US',
